@@ -1,0 +1,76 @@
+variables:
+  REMOTE_IMAGE: index.docker.io/fintechstudios/davical
+  CI_IMAGE: $CI_REGISTRY_IMAGE/davical
+  GIT_DEPTH: 10
+  DOCKER_BUILDKIT: 1
+  # https://docs.gitlab.com/ee/ci/docker/using_docker_build.html#docker-in-docker-with-tls-enabled-in-the-docker-executor
+  DOCKER_TLS_CERTDIR: "/certs"
+  DOCKER_CERT_PATH: "$DOCKER_TLS_CERTDIR/client"
+  DOCKER_TLS_VERIFY: 1
+  DOCKER_HOST: tcp://docker:2376
+  DOCKER_DRIVER: overlay2
+
+.docker-job:
+  image: docker/compose:1.29.2
+  services:
+    - docker:dind
+  before_script:
+    - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
+
+.build-matrix:
+  variables:
+    MAIN_DISTRO: bullseye
+  parallel:
+    matrix:
+      - PHP_VERSION: ["8.1.3"]
+        DISTRO: ["bullseye"]
+
+stages:
+  - build
+  - deploy
+
+build-image:
+  stage: build
+  extends:
+    - .docker-job
+    - .build-matrix
+  script:
+    - |
+      docker build \
+        --tag built_image \
+        --build-arg BUILDKIT_INLINE_CACHE=1 \
+        --build-arg PHP_VERSION \
+        --build-arg DISTRO \
+        --cache-from $CI_IMAGE:php$PHP_VERSION-$DISTRO \ 
+        --cache-from $CI_IMAGE:php$PHP_VERSION-$DISTRO-$CI_COMMIT_REF_SLUG \
+        .
+    - |
+      export IMAGE_TAGS="php$PHP_VERSION-$DISTRO php$PHP_VERSION-$DISTRO-$CI_COMMIT_REF_SLUG php$PHP_VERSION-$DISTRO-$CI_COMMIT_SHA"
+    - |
+      for TAG in $(echo $IMAGE_TAGS)
+      do
+        printf "Publishing %s\n" "$CI_IMAGE:$TAG"
+        docker tag built_image "$CI_IMAGE:$TAG"
+        docker push "$CI_IMAGE:$TAG"
+      done
+
+release-image:
+  stage: deploy
+  extends:
+    - .docker-job
+    - .build-matrix
+#  rules:
+#    - if: "$CI_COMMIT_BRANCH == 'main'"
+  script:
+    - echo $DOCKER_HUB_ACCESS_TOKEN | docker login -u $DOCKER_HUB_USERNAME --password-stdin
+    - export RELEASE_TAG="$CI_IMAGE:php$PHP_VERSION-$DISTRO-$CI_COMMIT_SHA"
+    - docker pull $RELEASE_TAG
+    - export IMAGE_TAGS=$(./helpers/get-image-tags.sh $RELEASE_TAG $PHP_VERSION $DISTRO "${CI_COMMIT_SHA:0:8}")
+    - if [ $DISTRO = $MAIN_DISTRO ]; then export IMAGE_TAGS="${IMAGE_TAGS} latest"; fi
+    - |
+      for TAG in $(echo $IMAGE_TAGS)
+      do
+        printf "Publishing %s\n" "$REMOTE_IMAGE:$TAG-test"
+        docker tag $RELEASE_TAG "$REMOTE_IMAGE:$TAG-test"
+        docker push "$REMOTE_IMAGE:$TAG-test"
+      done

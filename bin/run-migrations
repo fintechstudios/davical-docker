@@ -1,0 +1,108 @@
+#!/bin/bash
+###
+# Run DB migrations necessary to use Davical.
+# Will create the database on first-run, and only run necessary migrations on subsequent runs.
+#
+# Requires the following environment variables in addition to the container variables.
+# - ROOT_PGUSER
+# - ROOT_PGPASSWORD
+# - DAVICAL_ADMIN_PASS
+###
+
+set -e
+
+if [ -z ${ROOT_PGUSER+x} ]; then
+  echo "ROOT_PGUSER must be set"
+  exit 1
+fi
+if [ -z ${ROOT_PGPASSWORD+x} ]; then
+  echo "ROOT_PGPASSWORD must be set"
+  exit 1
+fi
+if [ -z ${DAVICAL_ADMIN_PASS+x} ]; then
+  echo "DAVICAL_ADMIN_PASS must be set"
+  exit 1
+fi
+
+if [ -z ${DBA_PGPASSWORD+x} ]; then
+  DBA_PGPASSWORD=$PGPASSWORD
+fi
+
+# store PG environment so it can be overridden as-needed
+DAVICAL_PGUSER=$PGUSER
+DAVICAL_PGPASSWORD=$PGPASSWORD
+DAVICAL_PGDATABASE=$PGDATABASE
+
+run_migrations() {
+  echo "Running dba/update-davical-database, which should automatically apply any necessary DB migrations."
+  /usr/share/davical/dba/update-davical-database \
+    --dbname $DAVICAL_PGDATABASE \
+    --dbuser $DBA_PGUSER \
+    --dbhost $PGHOST \
+    --dbpass $DBA_PGPASSWORD \
+    --appuser $DAVICAL_PGUSER \
+    --nopatch \
+    --owner $DBA_PGUSER
+}
+
+export PGUSER=$ROOT_PGUSER
+export PGPASSWORD=$ROOT_PGPASSWORD
+export PGDATABASE=
+
+# Wait for PG connection
+retries=10
+until pg_isready -q -t 3; do
+  [[ retries -eq 0 ]] && echo "Could not connect to Postgres" && exit 1
+  echo "Waiting for Postgres to be available"
+  retries=$((retries-1))
+  sleep 1
+done
+
+# Check whether the database has already been setup.
+databases=$(psql -qXl)
+if echo "$databases" | grep -q "$DAVICAL_PGDATABASE"; then
+  # The database already exists - just run any outstanding migrations
+  run_migrations
+  exit 0
+fi
+
+echo "Database has not been created - running first-time database setup"
+
+# Ideally, we would use /usr/share/davical/dba/create-database.sh to do first-time setup,
+# but it assumes the database is running on the same server for pg_hba.conf support.
+# These are all of the commands create-database.sh runs, plus setting up the user privileges without pg_hba
+# See https://wiki.davical.org/index.php?title=PostgreSQL_Config
+
+psql -qX \
+  -v db="$DAVICAL_PGDATABASE" \
+  -v dbaUser="$DBA_PGUSER" \
+  -v dbaPw="'$DBA_PGPASSWORD'" \
+  -v appUser="$DAVICAL_PGUSER" \
+  -v appPw="'$DAVICAL_PGPASSWORD'" \
+  <<EOF
+  CREATE DATABASE :db;
+  CREATE ROLE :dbaUser WITH LOGIN ENCRYPTED PASSWORD :dbaPw;
+  CREATE ROLE :appUser WITH LOGIN ENCRYPTED PASSWORD :appPw;
+  GRANT ALL PRIVILEGES ON DATABASE :db TO :dbaUser;
+EOF
+
+# the rest of the commands are run as the dba superuser
+export PGUSER=$DBA_PGUSER
+export PGPASSWORD=$DBA_PGPASSWORD
+export PGDATABASE=$DAVICAL_PGDATABASE
+
+psql -qXAt -f /usr/share/awl/dba/awl-tables.sql
+psql -qXAt -f /usr/share/awl/dba/schema-management.sql
+psql -qXAt -f /usr/share/davical/dba/davical.sql
+run_migrations
+psql -qXAt -f /usr/share/davical/dba/base-data.sql
+
+# DAViCal only uses salted SHA1 at-best, but it's better than storing the password in plaintext!
+# see https://wiki.davical.org/index.php?title=Force_Admin_Password
+# from https://gitlab.com/davical-project/awl/-/blob/3f044e2dc8435c2eeba61a3c41ec11c820711ab3/inc/DataUpdate.php#L48-58
+salted_password=$(php -r 'require "/usr/share/awl/inc/AWLUtilities.php"; echo session_salted_sha1($argv[1]);' "$DAVICAL_ADMIN_PASS")
+psql -qX \
+  -v pw="'$salted_password'" \
+  <<EOF
+  UPDATE usr SET password = :pw WHERE user_no = 1;
+EOF
