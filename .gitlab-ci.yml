@@ -35,14 +35,13 @@ build-image:
     - .docker-job
     - .build-matrix
   script:
-    - echo "Building $CI_IMAGE:php$PHP_VERSION-$DISTRO-$CI_COMMIT_REF_SLUG"
     - |
       docker build \
         --tag built_image \
         --build-arg BUILDKIT_INLINE_CACHE=1 \
         --build-arg PHP_VERSION \
         --build-arg DISTRO \
-        --cache-from $CI_IMAGE:php$PHP_VERSION-$DISTRO \ 
+        --cache-from $CI_IMAGE:php$PHP_VERSION-$DISTRO \
         --cache-from $CI_IMAGE:php$PHP_VERSION-$DISTRO-$CI_COMMIT_REF_SLUG \
         .
     - |
