@@ -1,6 +1,17 @@
 # davical-docker
 
+[![GitHub Repo stars](https://img.shields.io/github/stars/fintechstudios/davical-docker?style=social)](https://github.com/fintechstudios/davical-docker)
+[![GitHub branch checks state](https://img.shields.io/github/checks-status/fintechstudios/davical-docker/main)](https://gitlab.com/fintechstudios/davical-docker/-/pipelines?page=1&scope=all&ref=main)
+[![Docker Image Version (latest semver)](https://img.shields.io/docker/v/fintechstudios/davical?sort=semver)](https://hub.docker.com/r/fintechstudios/davical)
+
 Standalone [DAViCal](https://davical.org/) docker image (based on official PHP image).
+
+## Tags
+
+Images are tagged with the DAViCal version, AWL version, PHP version, and distribution.
+The `latest` tag will point to the most recent version of the image on the current stable Debian.
+See the most recently pushed images on [Docker Hub as `fintechstudios/davical`](https://hub.docker.com/r/fintechstudios/davical) 
+and via the [GitLab CI pipelines](https://gitlab.com/fintechstudios/davical-docker/-/pipelines?page=1&scope=all&ref=main).
 
 ## Usage
 
