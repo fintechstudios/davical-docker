@@ -58,8 +58,8 @@ release-image:
   extends:
     - .docker-job
     - .build-matrix
-#  rules:
-#    - if: "$CI_COMMIT_BRANCH == 'main'"
+  rules:
+    - if: "$CI_COMMIT_BRANCH == 'main'"
   script:
     - echo $DOCKER_HUB_ACCESS_TOKEN | docker login -u $DOCKER_HUB_USERNAME --password-stdin
     - export RELEASE_TAG="$CI_IMAGE:php$PHP_VERSION-$DISTRO-$CI_COMMIT_SHA"
@@ -69,7 +69,7 @@ release-image:
     - |
       for TAG in $(echo $IMAGE_TAGS)
       do
-        printf "Publishing %s\n" "$REMOTE_IMAGE:$TAG-test"
-        docker tag $RELEASE_TAG "$REMOTE_IMAGE:$TAG-test"
-        docker push "$REMOTE_IMAGE:$TAG-test"
+        printf "Publishing %s\n" "$REMOTE_IMAGE:$TAG"
+        docker tag $RELEASE_TAG "$REMOTE_IMAGE:$TAG"
+        docker push "$REMOTE_IMAGE:$TAG"
       done
