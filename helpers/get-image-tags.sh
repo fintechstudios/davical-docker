@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -e
 ###
 # Get the set of tags to release the given image
@@ -15,12 +15,14 @@ PHP_VERSION=$2
 DISTRO=$3
 COMMITHASH=$4
 
+beginswith() { case $2 in "$1"*) true;; *) false;; esac; }
+
 get_label() {
   label=$(docker inspect \
     --format "{{ index .Config.Labels \"$1\" }}" \
     $IMAGE_NAME)
-  if [[ $label == r* ]]; then
-    echo "${label:1}"
+  if beginswith r "$label"; then
+    echo "$label" | cut -c 2-
   else
     echo $label
   fi
@@ -28,9 +30,10 @@ get_label() {
 
 davical_version=$(get_label "com.fts.davical-version")
 awl_version=$(get_label "com.fts.awl-version")
+short_hash=$(echo "$COMMITHASH" | cut -c 1-8)
 
 echo "\
-$davical_version-awl$awl_version-php$PHP_VERSION-$DISTRO-$COMMITHASH \
+$davical_version-awl$awl_version-php$PHP_VERSION-$DISTRO-$short_hash \
 $davical_version-awl$awl_version-php$PHP_VERSION-$DISTRO \
 $davical_version-php$PHP_VERSION-$DISTRO \
 $davical_version-$DISTRO \

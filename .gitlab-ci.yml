@@ -44,8 +44,7 @@ build-image:
         --cache-from $CI_IMAGE:php$PHP_VERSION-$DISTRO \
         --cache-from $CI_IMAGE:php$PHP_VERSION-$DISTRO-$CI_COMMIT_REF_SLUG \
         .
-    - |
-      export IMAGE_TAGS="php$PHP_VERSION-$DISTRO php$PHP_VERSION-$DISTRO-$CI_COMMIT_REF_SLUG php$PHP_VERSION-$DISTRO-$CI_COMMIT_SHA"
+    - export IMAGE_TAGS="php$PHP_VERSION-$DISTRO php$PHP_VERSION-$DISTRO-$CI_COMMIT_REF_SLUG php$PHP_VERSION-$DISTRO-$CI_COMMIT_SHA"
     - |
       for TAG in $(echo $IMAGE_TAGS)
       do
@@ -65,7 +64,7 @@ release-image:
     - echo $DOCKER_HUB_ACCESS_TOKEN | docker login -u $DOCKER_HUB_USERNAME --password-stdin
     - export RELEASE_TAG="$CI_IMAGE:php$PHP_VERSION-$DISTRO-$CI_COMMIT_SHA"
     - docker pull $RELEASE_TAG
-    - export IMAGE_TAGS=$(./helpers/get-image-tags.sh $RELEASE_TAG $PHP_VERSION $DISTRO "${CI_COMMIT_SHA:0:8}")
+    - export IMAGE_TAGS=$(./helpers/get-image-tags.sh "$RELEASE_TAG" "$PHP_VERSION" "$DISTRO" "$CI_COMMIT_SHA")
     - if [ $DISTRO = $MAIN_DISTRO ]; then export IMAGE_TAGS="${IMAGE_TAGS} latest"; fi
     - |
       for TAG in $(echo $IMAGE_TAGS)
