@@ -1,0 +1,24 @@
+version: '3'
+services:
+  postgres:
+    image: postgres:alpine
+    ports:
+      - '5432:5432'
+    environment:
+      POSTGRES_PASSWORD: 'postgres'
+      POSTGRES_USER: 'postgres'
+  davical:
+    image: fintechstudios/davical
+    build: .
+    ports:
+      - '4080:80'
+    depends_on:
+      - postgres
+    environment:
+      PGHOST: 'postgres'
+      PGPASSWORD: 'davical'
+      # the following is only needed to run database migrations
+      RUN_MIGRATIONS_AT_STARTUP: 'true'
+      ROOT_PGUSER: 'postgres'
+      ROOT_PGPASSWORD: 'postgres'
+      DAVICAL_ADMIN_PASS: 'admin'
