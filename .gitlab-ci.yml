@@ -11,7 +11,7 @@ variables:
   DOCKER_DRIVER: overlay2
 
 .docker-job:
-  image: docker/compose:1.29.2
+  image: docker
   services:
     - docker:dind
   before_script:
@@ -35,6 +35,7 @@ build-image:
     - .docker-job
     - .build-matrix
   script:
+    - echo "Building $CI_IMAGE:php$PHP_VERSION-$DISTRO-$CI_COMMIT_REF_SLUG"
     - |
       docker build \
         --tag built_image \
