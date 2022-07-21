@@ -164,7 +164,9 @@ $c->restrict_setup_to_admin = true;
 * There are many different types of debug messages (for more details see
 * debug-config.php), but this will log them all:
 */
-// $c->dbg["ALL"] = 1;
+if (getenv("DAVICAL_DEBUG_ALL") == "true") {
+  $c->dbg["ALL"] = 1;
+}
 
 /**
 * While the above setting will quickly fill your PHP error log and should best

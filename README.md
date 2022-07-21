@@ -40,6 +40,7 @@ You may also want to supply any of the following variables to override default b
 - `HOST_NAME` - (*default:* `localhost`) used as Apache `ServerName`
 - `ADMIN_EMAIL` - (*default:* `admin@davical.example.com`) [email displayed on login page and in "From" for password reset emails](https://wiki.davical.org/index.php?title=Configuration/settings/admin_email)
 - `TZ` - (*default:* `UTC`) system [timezone name](https://en.wikipedia.org/wiki/List_of_tz_database_time_zones)
+- `DAVICAL_DEBUG_ALL` - (*default: none*) set to "true" to enable debug logs for all events
 
 #### DB Creation/Migrations
 
