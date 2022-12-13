@@ -1,4 +1,4 @@
-ARG PHP_VERSION="8.1.3"
+ARG PHP_VERSION="8.1.13"
 ARG DISTRO="bullseye"
 
 FROM php:${PHP_VERSION}-apache-${DISTRO}
@@ -55,12 +55,12 @@ RUN buildDeps="\
         /usr/share/doc/* \
         /usr/share/man/*
 
-ARG DAVICAL_VERSION="r1.1.10"
-ARG DAVICAL_SHA512="20a4a473b12d467131a3b93aed1828ae978cf3b34feedecda384a974814b285c1b842d1ec0d2638b14388a94643ed6f5566a5993884b6e71bdaf6789ce43bd63"
+ARG DAVICAL_VERSION="r1.1.11"
+ARG DAVICAL_SHA512="0144fd16989c3d960fd7d81bbc46df5b17a0d878f5be1f009f716f3a4c96eba7038214d77ab58367410600ba1267f4089234c295e5d9140e1b79b65b28023813"
 ARG DAVICAL_URL=https://gitlab.com/davical-project/davical/-/archive/${DAVICAL_VERSION}/davical.tar.gz
 
-ARG AWL_VERSION="r0.62"
-ARG AWL_SHA512="c4de99e627ba3bd0a0ace1feef89a341d1bb29c79e4f1f0dc786da890b7540577444a19f10d0ae118d53ae723bd61538e82fee15aa689d1a4b7fc13a39c4a559"
+ARG AWL_VERSION="r0.63"
+ARG AWL_SHA512="2b094676a595b0ebd45c65474e25ab22be7588770c226f944ab4edf1fa3d9d63dc4a9efa83d779cbe96d56fc8c3ccab6af62fc8cb583174f698a23aabfcbb2cc"
 ARG AWL_URL=https://gitlab.com/davical-project/awl/-/archive/${AWL_VERSION}/awl.tar.gz
 
 LABEL com.fts.davical-version=$DAVICAL_VERSION \
