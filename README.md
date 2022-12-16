@@ -9,7 +9,11 @@ Standalone [DAViCal](https://davical.org/) docker image (based on official PHP i
 ## Tags
 
 Images are tagged with the DAViCal version, AWL version, PHP version, and distribution.
-The `latest` tag will point to the most recent version of the image on the current stable Debian.
+
+The `latest` tag points to the most recent version of the image on the current stable Debian.
+
+The `nightly` tag points to builds from the master branches of DAViCal and AWL on the current stable Debian.
+
 See the most recently pushed images on [Docker Hub as `fintechstudios/davical`](https://hub.docker.com/r/fintechstudios/davical) 
 and via the [GitLab CI pipelines](https://gitlab.com/fintechstudios/davical-docker/-/pipelines?page=1&scope=all&ref=main).
 
