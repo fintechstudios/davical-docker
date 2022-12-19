@@ -70,6 +70,7 @@ stages:
   script:
     - echo $DOCKER_HUB_ACCESS_TOKEN | docker login -u $DOCKER_HUB_USERNAME --password-stdin
     - export RELEASE_TAG="$CI_IMAGE:$BUILD_PREFIX-php$PHP_VERSION-$DISTRO-$CI_COMMIT_SHA"
+    - echo "Preparing $RELEASE_TAG"
     - docker pull $RELEASE_TAG
     - export IMAGE_TAGS=$(./helpers/get-image-tags.sh "$RELEASE_TAG" "$PHP_VERSION" "$DISTRO" "$CI_COMMIT_SHA" "$BUILD_PREFIX")
     - |
@@ -146,4 +147,6 @@ release-nightly:
     - .release-image
     - .after-nightly-prepared
   needs:
+    - job: prepare-nightly
+      artifacts: true
     - build-nightly
