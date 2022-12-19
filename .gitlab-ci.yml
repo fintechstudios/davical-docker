@@ -10,6 +10,10 @@ variables:
   DOCKER_HOST: tcp://docker:2376
   DOCKER_DRIVER: overlay2
 
+stages:
+  - build
+  - deploy
+
 .docker-job:
   image: docker
   services:
@@ -17,23 +21,20 @@ variables:
   before_script:
     - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
 
-.build-matrix:
-  variables:
-    MAIN_DISTRO: bullseye
+.use-build-matrix:
   parallel:
     matrix:
       - PHP_VERSION: ["8.1.13"]
         DISTRO: ["bullseye"]
 
-stages:
-  - build
-  - deploy
-
-build-image:
+.build-image:
   stage: build
   extends:
     - .docker-job
-    - .build-matrix
+    - .use-build-matrix
+  variables:
+    BUILD_PREFIX: "" #required
+    DOCKER_BUILD_FLAGS: ""
   script:
     - |
       docker build \
@@ -43,8 +44,14 @@ build-image:
         --build-arg DISTRO \
         --cache-from $CI_IMAGE:php$PHP_VERSION-$DISTRO \
         --cache-from $CI_IMAGE:php$PHP_VERSION-$DISTRO-$CI_COMMIT_REF_SLUG \
+        $DOCKER_BUILD_FLAGS \
         .
-    - export IMAGE_TAGS="php$PHP_VERSION-$DISTRO php$PHP_VERSION-$DISTRO-$CI_COMMIT_REF_SLUG php$PHP_VERSION-$DISTRO-$CI_COMMIT_SHA"
+    - |
+      export IMAGE_TAGS="\
+        php$PHP_VERSION-$DISTRO \
+        php$PHP_VERSION-$DISTRO-$CI_COMMIT_REF_SLUG \
+        $BUILD_PREFIX-php$PHP_VERSION-$DISTRO-$CI_COMMIT_SHA \
+      "
     - |
       for TAG in $(echo $IMAGE_TAGS)
       do
@@ -53,19 +60,18 @@ build-image:
         docker push "$CI_IMAGE:$TAG"
       done
 
-release-image:
+.release-image:
   stage: deploy
   extends:
     - .docker-job
-    - .build-matrix
-  rules:
-    - if: "$CI_COMMIT_BRANCH == 'main'"
+    - .use-build-matrix
+  variables:
+    BUILD_PREFIX: "" # required
   script:
     - echo $DOCKER_HUB_ACCESS_TOKEN | docker login -u $DOCKER_HUB_USERNAME --password-stdin
-    - export RELEASE_TAG="$CI_IMAGE:php$PHP_VERSION-$DISTRO-$CI_COMMIT_SHA"
+    - export RELEASE_TAG="$CI_IMAGE:$BUILD_PREFIX-php$PHP_VERSION-$DISTRO-$CI_COMMIT_SHA"
     - docker pull $RELEASE_TAG
-    - export IMAGE_TAGS=$(./helpers/get-image-tags.sh "$RELEASE_TAG" "$PHP_VERSION" "$DISTRO" "$CI_COMMIT_SHA")
-    - if [ $DISTRO = $MAIN_DISTRO ]; then export IMAGE_TAGS="${IMAGE_TAGS} latest"; fi
+    - export IMAGE_TAGS=$(./helpers/get-image-tags.sh "$RELEASE_TAG" "$PHP_VERSION" "$DISTRO" "$CI_COMMIT_SHA" "$BUILD_PREFIX")
     - |
       for TAG in $(echo $IMAGE_TAGS)
       do
@@ -73,3 +79,67 @@ release-image:
         docker tag $RELEASE_TAG "$REMOTE_IMAGE:$TAG"
         docker push "$REMOTE_IMAGE:$TAG"
       done
+
+##
+## Commit pipelines
+##
+
+.only-commits:
+  rules:
+    - if: "$CI_PIPELINE_SOURCE != 'schedule'"
+  variables:
+    # this string is used in ./helpers/get-image-tags.sh and must be synced if changed
+    BUILD_PREFIX: "latest"
+
+build:
+  extends:
+    - .build-image
+    - .only-commits
+
+release:
+  extends:
+    - .release-image
+    - .only-commits
+  rules:
+    - if: "$CI_COMMIT_BRANCH == 'main'"
+
+##
+## Nightly pipelines
+##
+
+.only-nightly:
+  rules:
+    - if: "$CI_PIPELINE_SOURCE == 'schedule'"
+
+prepare-nightly:
+  extends:
+    - .only-nightly
+  stage: build
+  image:
+    name: curlimages/curl # only curl is needed for get-release-sha
+    entrypoint: ["sh"]
+  script:
+    # sets DOCKER_BUILD_FLAGS and BUILD_PREFIX to the latest master commit of DAViCal and AWL
+    - ./helpers/get-release-sha.sh master master
+  artifacts:
+    reports:
+      dotenv: .versions.env
+
+.after-nightly-prepared:
+  extends:
+    - .only-nightly
+  needs:
+    - job: prepare-nightly
+      artifacts: true
+
+build-nightly:
+  extends:
+    - .build-image
+    - .after-nightly-prepared
+
+release-nightly:
+  extends:
+    - .release-image
+    - .after-nightly-prepared
+  needs:
+    - build-nightly
