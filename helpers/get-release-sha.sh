@@ -1,6 +1,7 @@
 #!/bin/sh
 ###
 # Get the SHA512 for the tarball of the specified davical and awl versions. Creates .versions.env
+# Requires curl and jq
 #
 # Usage:
 # ./get-release-sha.sh <DAVICAL_VERSION> <AWL_VERSION>
@@ -11,6 +12,23 @@
 ###
 set -e
 
+DAVICAL_PROJECT_ID="36163" # from https://gitlab.com/davical-project/davical
+AWL_PROJECT_ID="36166" # from https://gitlab.com/davical-project/awl
+ENV_FILENAME=".versions.env"
+
+curl_and_sha() {
+  project_name=$1
+  version=$2
+  curl -s "https://gitlab.com/davical-project/$project_name/-/archive/$version/$project_name.tar.gz" \
+    | sha512sum - \
+    | cut -d " " -f 1
+}
+
+get_latest_commit() {
+  project_id=$1
+  curl -sS "https://gitlab.com/api/v4/projects/$project_id/repository/commits?per_page=1&page=1" | jq -r '.[0].id'
+}
+
 DAVICAL_VERSION="$1"
 AWL_VERSION="$2"
 
@@ -19,36 +37,21 @@ if [ -z $DAVICAL_VERSION ] || [  -z $AWL_VERSION ]; then
   exit 1
 fi
 
-DAVICAL_URL="https://gitlab.com/davical-project/davical/-/archive/${DAVICAL_VERSION}/davical.tar.gz"
-AWL_URL="https://gitlab.com/davical-project/awl/-/archive/${AWL_VERSION}/awl.tar.gz"
-ENV_FILENAME=".versions.env"
+if [ "$DAVICAL_VERSION" = "master" ]; then
+  DAVICAL_VERSION=$(get_latest_commit "$DAVICAL_PROJECT_ID")
+fi
 
-get_commit_hash() {
-  echo "$1" | sed -nr 's/[^-]*-[^-]*-([a-z0-9]*)\.tar\.gz/\1/p'
-}
+if [ "$AWL_VERSION" = "master" ]; then
+  AWL_VERSION=$(get_latest_commit "$AWL_PROJECT_ID")
+fi
 
-temp_path="./.tmp-$(date +"%s")"
-
-mkdir "$temp_path"
-cd "$temp_path"
-
-curl -JOSs "$DAVICAL_URL"
-davical_filename=$(find . -name "davical-*.tar.gz")
-DAVICAL_COMMITHASH=$(get_commit_hash "$davical_filename")
-DAVICAL_SHA512=$(sha512sum "$davical_filename" | cut -d " " -f 1)
-
-curl -JOSs "$AWL_URL"
-awl_filename=$(find . -name "awl-*.tar.gz")
-AWL_COMMITHASH=$(get_commit_hash "$awl_filename")
-AWL_SHA512=$(sha512sum "$awl_filename" | cut -d " " -f 1)
-
-cd ..
-rm -r "$temp_path"
+DAVICAL_SHA512=$(curl_and_sha "davical" "$DAVICAL_VERSION")
+AWL_SHA512=$(curl_and_sha "awl" "$AWL_VERSION")
 
 echo "\
-DAVICAL_VERSION=$DAVICAL_COMMITHASH
+DAVICAL_VERSION=$DAVICAL_VERSION
 DAVICAL_SHA512=$DAVICAL_SHA512
-AWL_VERSION=$AWL_COMMITHASH
+AWL_VERSION=$AWL_VERSION
 AWL_SHA512=$AWL_SHA512" > "$ENV_FILENAME"
 echo "Created $ENV_FILENAME:"
 cat "$ENV_FILENAME"
