@@ -99,9 +99,8 @@ build:
 release:
   extends:
     - .release-image
-    - .only-commits
   rules:
-    - if: "$CI_COMMIT_BRANCH == 'main'"
+    - if: "$CI_COMMIT_BRANCH == 'main' && $CI_PIPELINE_SOURCE != 'schedule'"
 
 ##
 ## Nightly pipelines
@@ -115,9 +114,7 @@ prepare-nightly:
   extends:
     - .only-nightly
   stage: build
-  image:
-    name: curlimages/curl # only curl is needed for get-release-sha
-    entrypoint: ["sh"]
+  image: curlimages/curl # only curl is needed for get-release-sha
   script:
     # sets DOCKER_BUILD_FLAGS and BUILD_PREFIX to the latest master commit of DAViCal and AWL
     - ./helpers/get-release-sha.sh master master
