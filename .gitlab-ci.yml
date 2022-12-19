@@ -114,9 +114,10 @@ prepare-nightly:
   extends:
     - .only-nightly
   stage: build
-  image: curlimages/curl # only curl is needed for get-release-sha
+  image: alpine
   script:
-    - apk add --no-cache jq
+    # needed for get-release-sha
+    - apk add --no-cache curl jq
     # sets DAVICAL_VERSION, DAVICAL_SHA512, AWL_VERSION, and AWL_SHA512 to the latest master commit of DAViCal and AWL
     - ./helpers/get-release-sha.sh master master
   artifacts:
