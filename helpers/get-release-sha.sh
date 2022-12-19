@@ -26,7 +26,8 @@ curl_and_sha() {
 
 get_latest_commit() {
   project_id=$1
-  curl -sS "https://gitlab.com/api/v4/projects/$project_id/repository/commits?per_page=1&page=1" | jq -r '.[0].id'
+  curl -sS "https://gitlab.com/api/v4/projects/$project_id/repository/commits?per_page=1&page=1" \
+    | jq -r '.[0].short_id'
 }
 
 DAVICAL_VERSION="$1"
