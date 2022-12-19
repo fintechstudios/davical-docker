@@ -116,7 +116,7 @@ prepare-nightly:
   stage: build
   image: curlimages/curl # only curl is needed for get-release-sha
   script:
-    # sets DOCKER_BUILD_FLAGS and BUILD_PREFIX to the latest master commit of DAViCal and AWL
+    # sets DAVICAL_VERSION, DAVICAL_SHA512, AWL_VERSION, and AWL_SHA512 to the latest master commit of DAViCal and AWL
     - ./helpers/get-release-sha.sh master master
   artifacts:
     reports:
@@ -128,6 +128,11 @@ prepare-nightly:
   needs:
     - job: prepare-nightly
       artifacts: true
+  variables:
+    DOCKER_BUILD_FLAGS: "--build-arg DAVICAL_VERSION --build-arg DAVICAL_SHA512 --build-arg AWL_VERSION --build-arg AWL_SHA512"
+    BUILD_PREFIX:
+      value: "$DAVICAL_VERSION-awl$AWL_VERSION"
+      expand: true
 
 build-nightly:
   extends:
