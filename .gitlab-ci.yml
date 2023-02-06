@@ -15,9 +15,9 @@ stages:
   - deploy
 
 .docker-job:
-  image: docker
+  image: docker:20
   services:
-    - docker:dind
+    - docker:20-dind
   before_script:
     - echo $CI_REGISTRY_PASSWORD | docker login -u $CI_REGISTRY_USER $CI_REGISTRY --password-stdin
 
