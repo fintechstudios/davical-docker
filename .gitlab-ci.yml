@@ -85,21 +85,25 @@ stages:
 ## Commit pipelines
 ##
 
-.only-commits:
-  rules:
-    - if: "$CI_PIPELINE_SOURCE != 'schedule'"
+.build-prefix-latest:
   variables:
     # this string is used in ./helpers/get-image-tags.sh and must be synced if changed
     BUILD_PREFIX: "latest"
 
+.only-commits:
+  rules:
+    - if: "$CI_PIPELINE_SOURCE != 'schedule'"
+
 build:
   extends:
     - .build-image
+    - .build-prefix-latest
     - .only-commits
 
 release:
   extends:
     - .release-image
+    - .build-prefix-latest
   rules:
     - if: "$CI_COMMIT_BRANCH == 'main' && $CI_PIPELINE_SOURCE != 'schedule'"
 
