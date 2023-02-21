@@ -43,6 +43,7 @@ RUN buildDeps="\
         pgsql \
         pdo_pgsql \
         imap \
+        calendar \
     # configure apache
     && a2enmod rewrite \
     && rm /etc/apache2/sites-enabled/000-default.conf \
