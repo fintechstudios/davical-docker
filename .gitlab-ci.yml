@@ -24,8 +24,8 @@ stages:
 .use-build-matrix:
   parallel:
     matrix:
-      - PHP_VERSION: ["8.1.13"]
-        DISTRO: ["bullseye"]
+      - PHP_VERSION: ["8.1.21", "8.2.8"]
+        DISTRO: ["bullseye", "bookworm"]
 
 .build-image:
   stage: build
