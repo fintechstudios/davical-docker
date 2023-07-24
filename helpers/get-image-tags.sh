@@ -10,7 +10,8 @@ set -e
 # ./get-release-sha.sh fintechstudios/davical 8.1.3 bullseye b62fa33a latest
 ###
 
-MAIN_DISTRO="bullseye"
+LATEST_DISTRO="bookworm"
+LATEST_PHP="8.2.8"
 
 IMAGE_NAME=$1
 PHP_VERSION=$2
@@ -36,22 +37,37 @@ awl_version=$(get_label "com.fts.awl-version")
 short_hash=$(echo "$COMMITHASH" | cut -c 1-8)
 
 if [ "$BUILD_PREFIX" = "latest" ]; then
-  distro_version="$DISTRO"
-  main_version="latest"
+  is_nightly=false
 else
-  distro_version="$DISTRO-nightly"
-  main_version="nightly"
+  is_nightly=true
 fi
 
-if [ $DISTRO != $MAIN_DISTRO ]; then
-  main_version=""
-fi
-
-echo "\
+# in the current build matrix, these are always specific enough to include unconditionally
+tags="\
 $davical_version-awl$awl_version-php$PHP_VERSION-$DISTRO-$short_hash \
 $davical_version-awl$awl_version-php$PHP_VERSION-$DISTRO \
-$davical_version-php$PHP_VERSION-$DISTRO \
-$davical_version-$DISTRO \
-$davical_version \
-$distro_version \
-$main_version"
+$davical_version-php$PHP_VERSION-$DISTRO"
+
+if [ $PHP_VERSION = $LATEST_PHP ]; then
+  # the distro tag only applies for the latest version of PHP
+  tags="$tags $DISTRO"
+
+  # and it should be suffixed with -nightly for nightly builds
+  if $is_nightly; then
+    tags="$tags-nightly"
+  fi;
+fi
+
+if [ $DISTRO = $LATEST_DISTRO ] && [ $PHP_VERSION = $LATEST_PHP ]; then
+  # the davical version tag only applies on the latest distro _and_ PHP version
+  tags="$tags $davical_version"
+
+  # as well as the latest/nightly tag
+  if $is_nightly; then
+    tags="$tags nightly"
+  else
+    tags="$tags latest"
+  fi;
+fi
+
+echo "$tags"
