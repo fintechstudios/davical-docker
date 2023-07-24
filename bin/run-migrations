@@ -28,6 +28,10 @@ if [ -z ${DBA_PGPASSWORD+x} ]; then
   DBA_PGPASSWORD=$PGPASSWORD
 fi
 
+if [ -z ${DAVICAL_SCHEMA+x} ]; then
+  DAVICAL_SCHEMA=$DBA_PGUSER
+fi
+
 # store PG environment so it can be overridden as-needed
 DAVICAL_PGUSER=$PGUSER
 DAVICAL_PGPASSWORD=$PGPASSWORD
@@ -79,11 +83,18 @@ psql -qX \
   -v dbaPw="'$DBA_PGPASSWORD'" \
   -v appUser="$DAVICAL_PGUSER" \
   -v appPw="'$DAVICAL_PGPASSWORD'" \
+  -v schema="$DAVICAL_SCHEMA" \
   <<EOF
   CREATE DATABASE :db;
   CREATE ROLE :dbaUser WITH LOGIN ENCRYPTED PASSWORD :dbaPw;
   CREATE ROLE :appUser WITH LOGIN ENCRYPTED PASSWORD :appPw;
   GRANT ALL PRIVILEGES ON DATABASE :db TO :dbaUser;
+
+  \connect :db
+  CREATE SCHEMA :schema AUTHORIZATION :dbaUser;
+  ALTER ROLE :dbaUser SET search_path TO :schema;
+  ALTER ROLE :appUser SET search_path TO :schema;
+  GRANT USAGE ON SCHEMA :schema TO :appUser;
 EOF
 
 # the rest of the commands are run as the dba superuser
