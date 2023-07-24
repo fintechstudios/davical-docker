@@ -45,7 +45,6 @@ run_migrations() {
     --dbhost $PGHOST \
     --dbpass $DBA_PGPASSWORD \
     --appuser $DAVICAL_PGUSER \
-    --nopatch \
     --owner $DBA_PGUSER
 }
 
