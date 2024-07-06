@@ -31,11 +31,13 @@ RUN buildDeps="\
         libyaml-perl \
         locales \
         postgresql-client \
+        libldap2-dev \
         ${buildDeps} \
     # configure locales
     && sed -i '/en_US.UTF-8/s/^# //g' /etc/locale.gen \
     && locale-gen \
     # configure PHP extensions
+    && docker-php-source extract \
     && docker-php-ext-configure imap --with-imap --with-imap-ssl --with-kerberos \
     && docker-php-ext-install \
         gettext \
@@ -44,6 +46,8 @@ RUN buildDeps="\
         pdo_pgsql \
         imap \
         calendar \
+        ldap \
+    && docker-php-source delete \\
     # configure apache
     && a2enmod rewrite \
     && rm /etc/apache2/sites-enabled/000-default.conf \
@@ -66,6 +70,10 @@ ARG AWL_URL=https://gitlab.com/davical-project/awl/-/archive/${AWL_VERSION}/awl.
 
 LABEL com.fts.davical-version=$DAVICAL_VERSION \
       com.fts.awl-version=$AWL_VERSION
+
+# Create ldap.conf and add basic configuration
+RUN mkdir /etc/ldap
+RUN echo "TLS_CACERTDIR /etc/ssl/certs" > /etc/ldap/ldap.conf
 
 # Install AWL
 ARG AWL_DEST=/usr/share/awl
